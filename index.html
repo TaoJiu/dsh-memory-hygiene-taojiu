@@ -1,0 +1,1526 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>骑手达标计算系统</title>
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --blue-50: #E6F1FB;
+    --blue-100: #B5D4F4;
+    --blue-500: #2178D4;
+    --blue-600: #185FA5;
+    --blue-800: #0C447C;
+    --green-50: #EAF3DE;
+    --green-600: #3B6D11;
+    --green-800: #27500A;
+    --amber-50: #FAEEDA;
+    --amber-600: #854F0B;
+    --red-50: #FCEBEB;
+    --red-200: #F09595;
+    --red-600: #A32D2D;
+    --gray-50: #F8F8F6;
+    --gray-100: #F1EFE8;
+    --gray-200: #D3D1C7;
+    --gray-400: #888780;
+    --gray-600: #5F5E5A;
+    --gray-800: #444441;
+    --gray-900: #2C2C2A;
+    --radius-sm: 6px;
+    --radius-md: 8px;
+    --radius-lg: 12px;
+    --shadow-sm: 0 1px 3px rgba(0,0,0,0.08);
+    --shadow-md: 0 4px 12px rgba(0,0,0,0.10);
+  }
+
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", "Microsoft YaHei", sans-serif;
+    font-size: 14px;
+    color: var(--gray-900);
+    background: var(--gray-50);
+    min-height: 100vh;
+  }
+
+  /* ── 顶部导航栏 ── */
+  .topbar {
+    background: #fff;
+    border-bottom: 1px solid var(--gray-200);
+    height: 56px;
+    display: flex;
+    align-items: center;
+    padding: 0 24px;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+  }
+  .topbar-logo {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 17px;
+    font-weight: 600;
+    color: var(--gray-900);
+    letter-spacing: -0.3px;
+  }
+  .topbar-logo .icon-wrap {
+    width: 32px;
+    height: 32px;
+    background: var(--blue-600);
+    border-radius: var(--radius-sm);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .topbar-logo .icon-wrap svg { color: #fff; }
+  .topbar-sub {
+    margin-left: auto;
+    font-size: 13px;
+    color: var(--gray-400);
+  }
+
+  /* ── 主布局 ── */
+  .main-layout {
+    display: grid;
+    grid-template-columns: 380px 1fr;
+    gap: 0;
+    min-height: calc(100vh - 56px);
+  }
+
+  /* ── 左侧面板 ── */
+  .sidebar {
+    background: #fff;
+    border-right: 1px solid var(--gray-200);
+    padding: 24px 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+    overflow-y: auto;
+  }
+
+  .panel-title {
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--gray-400);
+    text-transform: uppercase;
+    letter-spacing: 0.6px;
+    margin-bottom: 12px;
+  }
+
+  /* 上传区域 */
+  .upload-zone {
+    border: 1.5px dashed var(--gray-200);
+    border-radius: var(--radius-md);
+    padding: 28px 16px;
+    text-align: center;
+    cursor: pointer;
+    transition: border-color 0.2s, background 0.2s;
+    position: relative;
+  }
+  .upload-zone:hover, .upload-zone.drag-over {
+    border-color: var(--blue-500);
+    background: var(--blue-50);
+  }
+  .upload-zone input[type="file"] {
+    position: absolute;
+    inset: 0;
+    opacity: 0;
+    cursor: pointer;
+    width: 100%;
+    height: 100%;
+  }
+  .upload-icon {
+    width: 40px;
+    height: 40px;
+    margin: 0 auto 10px;
+    background: var(--gray-100);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--gray-400);
+  }
+  .upload-zone.has-file .upload-icon {
+    background: var(--blue-50);
+    color: var(--blue-600);
+  }
+  .upload-title { font-size: 13px; font-weight: 500; color: var(--gray-800); margin-bottom: 4px; }
+  .upload-hint { font-size: 12px; color: var(--gray-400); }
+  .upload-filename {
+    margin-top: 8px;
+    font-size: 12px;
+    color: var(--blue-600);
+    font-weight: 500;
+    word-break: break-all;
+  }
+
+  /* 参数配置 */
+  .config-grid {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+  }
+  .form-item { display: flex; flex-direction: column; gap: 5px; }
+  .form-label { font-size: 12px; font-weight: 500; color: var(--gray-600); }
+  .form-input {
+    width: 100%;
+    height: 34px;
+    border: 1px solid var(--gray-200);
+    border-radius: var(--radius-sm);
+    padding: 0 10px;
+    font-size: 13px;
+    color: var(--gray-900);
+    background: #fff;
+    transition: border-color 0.15s;
+    outline: none;
+  }
+  .form-input:focus { border-color: var(--blue-500); }
+  .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+
+  /* 分层标准表格 */
+  .tier-table { width: 100%; border-collapse: collapse; font-size: 12px; table-layout: fixed; }
+  .tier-table th {
+    background: var(--gray-100);
+    color: var(--gray-600);
+    font-weight: 500;
+    padding: 6px 8px;
+    text-align: left;
+    border-bottom: 1px solid var(--gray-200);
+  }
+  .tier-table td {
+    padding: 4px 6px;
+    border-bottom: 1px solid var(--gray-100);
+    color: var(--gray-800);
+    vertical-align: middle;
+  }
+  .tier-input {
+    width: 100%;
+    height: 28px;
+    border: 1px solid var(--gray-200);
+    border-radius: var(--radius-sm);
+    padding: 0 6px;
+    font-size: 12px;
+    color: var(--gray-900);
+    text-align: center;
+    background: #fff;
+    transition: border-color 0.15s;
+    outline: none;
+    min-width: 48px;
+  }
+  .tier-input:focus { border-color: var(--blue-500); }
+  .tier-input.modified { border-color: var(--amber-600); background: var(--amber-50); }
+  .tier-badge {
+    display: inline-block;
+    padding: 1px 6px;
+    border-radius: 3px;
+    font-size: 11px;
+    font-weight: 500;
+    background: var(--blue-50);
+    color: var(--blue-600);
+  }
+
+  /* 运行按钮 */
+  .run-btn {
+    width: 100%;
+    height: 40px;
+    background: var(--blue-600);
+    color: #fff;
+    border: none;
+    border-radius: var(--radius-md);
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    transition: background 0.15s;
+  }
+  .run-btn:hover { background: var(--blue-800); }
+  .run-btn:disabled { background: var(--gray-200); color: var(--gray-400); cursor: not-allowed; }
+
+  /* ── 右侧主内容 ── */
+  .content-area {
+    padding: 24px 28px;
+    overflow-y: auto;
+  }
+
+  /* 空状态 */
+  .empty-state {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    height: 100%;
+    min-height: 400px;
+    color: var(--gray-400);
+    gap: 14px;
+    text-align: center;
+  }
+  .empty-icon {
+    width: 64px;
+    height: 64px;
+    background: var(--gray-100);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .empty-title { font-size: 15px; font-weight: 500; color: var(--gray-600); }
+  .empty-sub { font-size: 13px; color: var(--gray-400); }
+
+  /* 结果区标题栏 */
+  .result-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 20px;
+  }
+  .site-name-display {
+    font-size: 22px;
+    font-weight: 700;
+    color: var(--gray-900);
+    margin-bottom: 2px;
+  }
+  .result-title {
+    font-size: 18px;
+    font-weight: 600;
+    color: var(--gray-600);
+  }
+  .result-meta { font-size: 13px; color: var(--gray-400); margin-top: 2px; }
+  .export-btn {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    height: 34px;
+    padding: 0 14px;
+    background: #fff;
+    border: 1px solid var(--gray-200);
+    border-radius: var(--radius-md);
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--gray-800);
+    cursor: pointer;
+    transition: border-color 0.15s, background 0.15s;
+  }
+  .export-btn:hover { border-color: var(--blue-500); color: var(--blue-600); }
+  .export-btn:disabled { background: var(--gray-100); color: var(--gray-400); border-color: var(--gray-200); cursor: not-allowed; }
+  .export-btn:disabled:hover { border-color: var(--gray-200); color: var(--gray-400); }
+
+  /* 指标卡片 */
+  .metrics-grid {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap: 10px;
+    margin-bottom: 24px;
+  }
+  .metric-card {
+    background: #fff;
+    border: 1px solid var(--gray-200);
+    border-radius: var(--radius-lg);
+    padding: 12px 8px;
+  }
+  .metric-label { font-size: 12px; color: var(--gray-400); margin-bottom: 4px; }
+  .metric-value { font-size: 24px; font-weight: 600; color: var(--gray-900); line-height: 1.1; }
+  .metric-unit { font-size: 13px; font-weight: 400; color: var(--gray-400); margin-left: 2px; }
+  .metric-card.highlight { border-color: var(--blue-100); background: var(--blue-50); }
+  .metric-card.highlight .metric-value { color: var(--blue-600); }
+
+  /* 分层统计条形 */
+  .tier-section {
+    background: #fff;
+    border: 1px solid var(--gray-200);
+    border-radius: var(--radius-lg);
+    padding: 20px;
+    margin-bottom: 20px;
+  }
+  .tier-section-title {
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--gray-900);
+    margin-bottom: 16px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .tier-bars { display: flex; flex-direction: column; gap: 10px; }
+  .tier-bar-row { display: flex; align-items: center; gap: 12px; }
+  .tier-bar-label { width: 56px; font-size: 12px; font-weight: 500; color: var(--gray-600); flex-shrink: 0; text-align: right; }
+  .tier-bar-track { flex: 1; height: 22px; background: var(--gray-100); border-radius: 4px; overflow: hidden; }
+  .tier-bar-fill {
+    height: 100%;
+    border-radius: 4px;
+    transition: width 0.6s ease;
+    display: flex;
+    align-items: center;
+    padding-left: 8px;
+    font-size: 11px;
+    font-weight: 500;
+    color: #fff;
+    white-space: nowrap;
+    min-width: 0;
+  }
+  .tier-bar-count { width: 70px; font-size: 12px; color: var(--gray-600); flex-shrink: 0; }
+
+  /* 标签页 */
+  .tabs { display: flex; gap: 2px; border-bottom: 1px solid var(--gray-200); margin-bottom: 16px; }
+  .tab-btn {
+    padding: 8px 16px;
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--gray-400);
+    background: none;
+    border: none;
+    border-bottom: 2px solid transparent;
+    cursor: pointer;
+    transition: color 0.15s;
+    margin-bottom: -1px;
+  }
+  .tab-btn.active { color: var(--blue-600); border-bottom-color: var(--blue-600); }
+  .tab-btn:hover:not(.active) { color: var(--gray-800); }
+
+  /* 数据表格 */
+  .table-wrap {
+    background: #fff;
+    border: 1px solid var(--gray-200);
+    border-radius: var(--radius-lg);
+    overflow: hidden;
+  }
+  .table-toolbar {
+    padding: 12px 16px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    border-bottom: 1px solid var(--gray-100);
+  }
+  .search-input {
+    flex: 1;
+    height: 30px;
+    border: 1px solid var(--gray-200);
+    border-radius: var(--radius-sm);
+    padding: 0 10px;
+    font-size: 13px;
+    outline: none;
+    color: var(--gray-900);
+  }
+  .search-input:focus { border-color: var(--blue-500); }
+  .filter-btns { display: flex; gap: 6px; }
+  .filter-btn {
+    height: 28px;
+    padding: 0 10px;
+    border-radius: var(--radius-sm);
+    border: 1px solid var(--gray-200);
+    background: #fff;
+    font-size: 12px;
+    color: var(--gray-600);
+    cursor: pointer;
+    transition: all 0.12s;
+  }
+  .filter-btn.active { background: var(--blue-600); color: #fff; border-color: var(--blue-600); }
+  .data-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  .data-table th {
+    background: var(--gray-50);
+    padding: 10px 14px;
+    text-align: left;
+    font-weight: 500;
+    color: var(--gray-600);
+    font-size: 12px;
+    border-bottom: 1px solid var(--gray-200);
+    white-space: nowrap;
+    user-select: none;
+  }
+  .data-table th.sort-header {
+    cursor: pointer;
+    transition: background .15s;
+  }
+  .data-table th.sort-header:hover { background: var(--gray-100); color: var(--gray-800); }
+  .data-table th .sort-arrow { margin-left: 4px; font-size: 10px; color: var(--gray-400); display: inline-block; width: 12px; }
+  .data-table th.sort-active .sort-arrow { color: var(--blue-600); }
+  .data-table td {
+    padding: 10px 14px;
+    border-bottom: 1px solid var(--gray-100);
+    color: var(--gray-800);
+    white-space: nowrap;
+  }
+  .data-table tr:last-child td { border-bottom: none; }
+  .data-table tr:hover td { background: var(--gray-50); }
+
+  /* 达标状态徽章 */
+  .badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 2px 8px;
+    border-radius: 4px;
+    font-size: 12px;
+    font-weight: 500;
+  }
+  .badge-pass { background: var(--green-50); color: var(--green-600); }
+  .badge-near { background: var(--amber-50); color: var(--amber-600); }
+  .badge-fail { background: var(--red-50); color: var(--red-600); }
+  .badge-dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: currentColor;
+  }
+
+  /* 分层徽章颜色 */
+  .tier-s5 { background: #EEF4FF; color: #3B5BDB; }
+  .tier-s4 { background: #F0FFF4; color: #2F855A; }
+  .tier-s3 { background: var(--blue-50); color: var(--blue-600); }
+  .tier-s2 { background: #FFFBEB; color: #B45309; }
+  .tier-s1 { background: #FFF5F5; color: #C53030; }
+  .tier-fail { background: var(--gray-100); color: var(--gray-600); }
+
+  /* 进度提示 */
+  .progress-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(255,255,255,0.85);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+    display: none;
+  }
+  .progress-card {
+    background: #fff;
+    border: 1px solid var(--gray-200);
+    border-radius: var(--radius-lg);
+    padding: 32px 48px;
+    text-align: center;
+    box-shadow: var(--shadow-md);
+  }
+  .spinner {
+    width: 32px;
+    height: 32px;
+    border: 3px solid var(--gray-100);
+    border-top-color: var(--blue-600);
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+    margin: 0 auto 16px;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* Toast 提示 */
+  .toast {
+    position: fixed;
+    bottom: 24px;
+    right: 24px;
+    background: var(--gray-900);
+    color: #fff;
+    padding: 10px 16px;
+    border-radius: var(--radius-md);
+    font-size: 13px;
+    opacity: 0;
+    transform: translateY(8px);
+    transition: all 0.25s;
+    z-index: 2000;
+  }
+  .toast.show { opacity: 1; transform: translateY(0); }
+  .toast.success { background: var(--green-600); }
+  .toast.error { background: var(--red-600); }
+
+  .tab-panel { display: none; }
+  .tab-panel.active { display: block; }
+
+  .section-divider { height: 1px; background: var(--gray-100); margin: 20px 0; }
+
+  @media (max-width: 900px) {
+    .main-layout { grid-template-columns: 1fr; }
+    .sidebar { border-right: none; border-bottom: 1px solid var(--gray-200); }
+    .metrics-grid { grid-template-columns: repeat(3, 1fr); }
+  }
+</style>
+</head>
+<body>
+
+<!-- 顶部导航 -->
+<header class="topbar">
+  <div class="topbar-logo">
+    <div class="icon-wrap">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
+        <circle cx="9" cy="7" r="4"/>
+        <path d="M23 21v-2a4 4 0 0 0-3-3.87"/>
+        <path d="M16 3.13a4 4 0 0 1 0 7.75"/>
+      </svg>
+    </div>
+    骑手达标计算系统
+  </div>
+  <span class="topbar-sub" id="fileStatus">未加载数据文件</span>
+</header>
+
+<!-- 主布局 -->
+<div class="main-layout">
+
+  <!-- 左侧配置面板 -->
+  <aside class="sidebar">
+
+    <!-- 数据文件上传 -->
+    <section>
+      <div class="panel-title">数据文件</div>
+      <div class="upload-zone" id="uploadZone">
+        <input type="file" id="fileInput" accept=".xlsx,.xls" />
+        <div class="upload-icon" id="uploadIcon">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+            <polyline points="17 8 12 3 7 8"/>
+            <line x1="12" y1="3" x2="12" y2="15"/>
+          </svg>
+        </div>
+        <div class="upload-title" id="uploadTitle">点击或拖拽上传</div>
+        <div class="upload-hint">支持实时出勤数据 .xlsx / .xls</div>
+        <div class="upload-filename" id="uploadFilename"></div>
+      </div>
+    </section>
+
+    <!-- 计算按钮 -->
+    <button class="run-btn" id="runBtn" disabled style="margin-top:16px;">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <polygon points="5 3 19 12 5 21 5 3"/>
+      </svg>
+      开始计算
+    </button>
+
+    <!-- 统计信息 -->
+    <section>
+      <div class="panel-title">统计信息</div>
+      <div class="config-grid">
+        <div class="form-row">
+          <div class="form-item">
+            <label class="form-label">统计时间</label>
+            <input class="form-input" id="statTime" type="text" placeholder="如：13:05:28" />
+          </div>
+          <div class="form-item">
+            <label class="form-label">应排人数</label>
+            <input class="form-input" id="expectedCount" type="number" value="88" placeholder="如：88" min="0" />
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 达标阈值 -->
+    <section>
+      <div class="panel-title">达标阈值</div>
+      <div class="config-grid">
+        <div class="form-row">
+          <div class="form-item">
+            <label class="form-label">有效时长 (小时)</label>
+            <input class="form-input" id="thresholdDuration" type="number" value="6" min="0" step="0.5" />
+          </div>
+          <div class="form-item">
+            <label class="form-label">完单量 (单)</label>
+            <input class="form-input" id="thresholdOrders" type="number" value="18" min="0" />
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 分层标准（可编辑） -->
+    <section>
+      <div class="panel-title" style="display:flex;align-items:center;justify-content:space-between;">
+        <span>甲方分层标准</span>
+        <button id="resetTierBtn" style="border:none;background:none;font-size:11px;color:var(--gray-400);cursor:pointer;padding:0;" title="恢复默认标准">↺ 重置</button>
+      </div>
+      <table class="tier-table">
+        <thead>
+          <tr>
+            <th style="width:40%">层级</th>
+            <th style="width:30%">时长 ≥</th>
+            <th style="width:30%">完单 ≥</th>
+          </tr>
+        </thead>
+        <tbody id="tierTableBody">
+          <!-- 动态生成 -->
+        </tbody>
+      </table>
+    </section>
+
+  </aside>
+
+  <!-- 右侧结果区 -->
+  <main class="content-area" id="contentArea">
+
+    <!-- 空状态 -->
+    <div class="empty-state" id="emptyState">
+      <div class="empty-icon">
+        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#B4B2A9" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+          <rect x="2" y="3" width="20" height="14" rx="2"/>
+          <line x1="8" y1="21" x2="16" y2="21"/>
+          <line x1="12" y1="17" x2="12" y2="21"/>
+        </svg>
+      </div>
+      <div class="empty-title">上传数据文件并点击「开始计算」</div>
+      <div class="empty-sub">支持实时出勤数据 Excel 文件，自动识别骑手达标情况</div>
+    </div>
+
+    <!-- 结果区（初始隐藏） -->
+    <div id="resultArea" style="display:none;">
+
+      <!-- 标题栏 -->
+      <div class="result-header">
+        <div>
+          <div class="site-name-display" id="siteNameDisplay"></div>
+          <div class="result-title" id="resultTitle">达标统计结果</div>
+          <div class="result-meta" id="resultMeta"></div>
+        </div>
+        <button class="export-btn" id="exportBtn" disabled>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+            <polyline points="7 10 12 15 17 10"/>
+            <line x1="12" y1="15" x2="12" y2="3"/>
+          </svg>
+          导出 Excel
+        </button>
+      </div>
+
+      <!-- 核心指标 -->
+      <div class="metrics-grid" id="metricsGrid">
+        <div class="metric-card highlight">
+          <div class="metric-label">总单量</div>
+          <div class="metric-value" id="m-totalOrders">—<span class="metric-unit">单</span></div>
+        </div>
+        <div class="metric-card">
+          <div class="metric-label">实际排班</div>
+          <div class="metric-value" id="m-scheduled">—<span class="metric-unit">人</span></div>
+        </div>
+        <div class="metric-card">
+          <div class="metric-label">活跃骑手</div>
+          <div class="metric-value" id="m-active">—<span class="metric-unit">人</span></div>
+        </div>
+        <div class="metric-card highlight">
+          <div class="metric-label">达标人数</div>
+          <div class="metric-value" id="m-pass">—<span class="metric-unit">人</span></div>
+        </div>
+        <div class="metric-card highlight">
+          <div class="metric-label">达标率</div>
+          <div class="metric-value" id="m-rate">—<span class="metric-unit">%</span></div>
+        </div>
+        <div class="metric-card">
+          <div class="metric-label">门槛值</div>
+          <div class="metric-value" id="m-threshold">—<span class="metric-unit">人</span></div>
+        </div>
+        <div class="metric-card">
+          <div class="metric-label">人效</div>
+          <div class="metric-value" id="m-efficiency">—<span class="metric-unit">单/人</span></div>
+        </div>
+      </div>
+
+      <!-- 分层统计 -->
+      <div class="tier-section">
+        <div class="tier-section-title">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <line x1="18" y1="20" x2="18" y2="10"/>
+            <line x1="12" y1="20" x2="12" y2="4"/>
+            <line x1="6" y1="20" x2="6" y2="14"/>
+          </svg>
+          骑手分层分布
+        </div>
+        <div class="tier-bars" id="tierBars"></div>
+      </div>
+
+      <!-- 明细标签页 -->
+      <div class="tabs">
+        <button class="tab-btn active" data-tab="compliance">全天达标明细</button>
+        <button class="tab-btn" data-tab="tiering">骑手分层明细</button>
+      </div>
+
+      <!-- 达标明细表 -->
+      <div class="tab-panel active" id="tab-compliance">
+        <div class="table-wrap">
+          <div class="table-toolbar">
+            <input class="search-input" id="searchCompliance" type="text" placeholder="搜索骑手姓名…" />
+            <div class="filter-btns">
+              <button class="filter-btn active" data-filter="all" data-table="compliance">全部</button>
+              <button class="filter-btn" data-filter="pass" data-table="compliance">达标</button>
+              <button class="filter-btn" data-filter="near" data-table="compliance">接近达标</button>
+              <button class="filter-btn" data-filter="fail" data-table="compliance">未达标</button>
+            </div>
+          </div>
+          <div style="overflow-x:auto;">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>#</th>
+                  <th>姓名</th>
+                  <th class="sort-header" data-column="duration" data-table="compliance">有效时长<span class="sort-arrow"></span></th>
+                  <th class="sort-header" data-column="orders" data-table="compliance">完单量<span class="sort-arrow"></span></th>
+                  <th>配送中</th>
+                  <th>工作状态</th>
+                  <th>排班状态</th>
+                  <th class="sort-header" data-column="compliance" data-table="compliance">达标情况<span class="sort-arrow"></span></th>
+                </tr>
+              </thead>
+              <tbody id="complianceTableBody"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- 分层明细表 -->
+      <div class="tab-panel" id="tab-tiering">
+        <div class="table-wrap">
+          <div class="table-toolbar">
+            <input class="search-input" id="searchTiering" type="text" placeholder="搜索骑手姓名…" />
+            <div class="filter-btns" id="tierFilterBtns">
+              <button class="filter-btn active" data-filter="all" data-table="tiering">全部</button>
+            </div>
+          </div>
+          <div style="overflow-x:auto;">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>#</th>
+                  <th>姓名</th>
+                  <th class="sort-header" data-column="duration" data-table="tiering">有效时长<span class="sort-arrow"></span></th>
+                  <th class="sort-header" data-column="orders" data-table="tiering">完单量<span class="sort-arrow"></span></th>
+                  <th>配送中</th>
+                  <th>工作状态</th>
+                  <th>所属层级</th>
+                  <th>距下一层</th>
+                </tr>
+              </thead>
+              <tbody id="tieringTableBody"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+    </div><!-- /resultArea -->
+
+  </main>
+</div>
+
+<!-- 加载遮罩 -->
+<div class="progress-overlay" id="progressOverlay">
+  <div class="progress-card">
+    <div class="spinner"></div>
+    <div style="font-size:14px;font-weight:500;color:#444;">正在计算中…</div>
+    <div style="font-size:12px;color:#888;margin-top:4px;">解析数据并统计达标情况</div>
+  </div>
+</div>
+
+<!-- Toast -->
+<div class="toast" id="toast"></div>
+
+<script>
+// ════════════════════════════════════════
+//  配置
+// ════════════════════════════════════════
+const DEFAULT_TIERS = [
+  { name: '标准5', minDuration: 8, minOrders: 46 },
+  { name: '标准4', minDuration: 7, minOrders: 37 },
+  { name: '标准3', minDuration: 6, minOrders: 31 },
+  { name: '标准2', minDuration: 6, minOrders: 24 },
+  { name: '标准1', minDuration: 6, minOrders: 18 },
+];
+
+let appState = {
+  rawData: null,
+  filename: '',
+  result: null,
+};
+
+// ════════════════════════════════════════
+//  初始化分层表格（可编辑）
+// ════════════════════════════════════════
+function getCurrentTiers() {
+  return DEFAULT_TIERS.map((t, i) => {
+    const dVal = document.getElementById(`tier-duration-${i}`);
+    const oVal = document.getElementById(`tier-orders-${i}`);
+    return {
+      name: t.name,
+      minDuration: dVal ? (parseFloat(dVal.value) || t.minDuration) : t.minDuration,
+      minOrders:   oVal ? (parseInt(oVal.value) || t.minOrders)   : t.minOrders,
+    };
+  });
+}
+
+function renderTierTable() {
+  const tbody = document.getElementById('tierTableBody');
+  tbody.innerHTML = DEFAULT_TIERS.map((t, i) => `
+    <tr>
+      <td><span class="badge tier-${t.name.replace('标准','s')}">${t.name}</span></td>
+      <td><input class="tier-input" id="tier-duration-${i}" type="number" value="${t.minDuration}" step="0.5" min="0" data-default="${t.minDuration}" /></td>
+      <td><input class="tier-input" id="tier-orders-${i}" type="number" value="${t.minOrders}" min="0" data-default="${t.minOrders}" /></td>
+    </tr>
+  `).join('') + `<tr>
+      <td><span class="badge tier-fail">未达标</span></td>
+      <td>—</td><td>—</td>
+    </tr>`;
+
+  // 标记修改过的字段
+  tbody.querySelectorAll('.tier-input').forEach(inp => {
+    inp.addEventListener('input', () => {
+      const def = parseFloat(inp.dataset.default);
+      const cur = parseFloat(inp.value);
+      if (!isNaN(cur) && cur !== def) inp.classList.add('modified');
+      else inp.classList.remove('modified');
+    });
+  });
+}
+
+// 重置按钮
+document.getElementById('resetTierBtn').addEventListener('click', () => {
+  DEFAULT_TIERS.forEach((t, i) => {
+    const dInp = document.getElementById(`tier-duration-${i}`);
+    const oInp = document.getElementById(`tier-orders-${i}`);
+    if (dInp) { dInp.value = t.minDuration; dInp.classList.remove('modified'); }
+    if (oInp) { oInp.value = t.minOrders;   oInp.classList.remove('modified'); }
+  });
+  showToast('分层标准已恢复默认值', 'success');
+});
+
+// ════════════════════════════════════════
+//  文件上传处理
+// ════════════════════════════════════════
+const uploadZone = document.getElementById('uploadZone');
+const fileInput  = document.getElementById('fileInput');
+
+uploadZone.addEventListener('dragover', e => { e.preventDefault(); uploadZone.classList.add('drag-over'); });
+uploadZone.addEventListener('dragleave', () => uploadZone.classList.remove('drag-over'));
+uploadZone.addEventListener('drop', e => {
+  e.preventDefault();
+  uploadZone.classList.remove('drag-over');
+  const f = e.dataTransfer.files[0];
+  if (f) loadFile(f);
+});
+fileInput.addEventListener('change', e => {
+  if (e.target.files[0]) loadFile(e.target.files[0]);
+});
+
+function loadFile(file) {
+  // 校验文件类型
+  if (!file.name.match(/\.(xlsx|xls)$/i)) {
+    showToast('文件格式不支持，请上传 .xlsx 或 .xls 格式的 Excel 文件', 'error');
+    return;
+  }
+
+  // 校验文件大小（最大 50MB）
+  if (file.size > 50 * 1024 * 1024) {
+    showToast('文件过大（超过 50MB），请检查是否选错了文件', 'error');
+    return;
+  }
+
+  const reader = new FileReader();
+
+  reader.onerror = () => {
+    showToast('文件读取失败，请检查文件是否损坏或正在被其他程序占用', 'error');
+  };
+
+  reader.onload = e => {
+    try {
+      let wb;
+      try {
+        wb = XLSX.read(e.target.result, { type: 'array' });
+      } catch (parseErr) {
+        showToast('文件解析失败：文件可能已损坏或不是有效的 Excel 文件', 'error');
+        console.error('XLSX parse error:', parseErr);
+        return;
+      }
+
+      // 检查是否有工作表
+      if (!wb.SheetNames || wb.SheetNames.length === 0) {
+        showToast('文件中未找到任何工作表，请检查文件内容', 'error');
+        return;
+      }
+
+      const ws = wb.Sheets[wb.SheetNames[0]];
+      if (!ws) {
+        showToast(`无法读取工作表「${wb.SheetNames[0]}」，请检查文件`, 'error');
+        return;
+      }
+
+      // 解析数据
+      const rawData = XLSX.utils.sheet_to_json(ws, { defval: '' });
+      if (!rawData || rawData.length === 0) {
+        showToast('文件中没有数据行，请确认上传了正确的出勤数据文件', 'error');
+        return;
+      }
+
+      // 检查是否有表头行
+      const headers = Object.keys(rawData[0]);
+      if (headers.length === 0) {
+        showToast('无法识别表头列，请检查文件格式是否为标准出勤数据', 'error');
+        return;
+      }
+
+      // 快速检查是否像出勤数据（至少有姓名字段）
+      const hasNameCol = findCol(headers, ['姓名','骑手姓名','骑手','姓名 / 骑手姓名']);
+      if (!hasNameCol) {
+        showToast('文件中未找到「姓名」列，请确认上传的是骑手出勤数据文件。当前表头：' + headers.slice(0,5).join('、') + (headers.length > 5 ? '…' : ''), 'error');
+        return;
+      }
+
+      appState.rawData = rawData;
+      appState.filename = file.name;
+
+      // 从第二列自动读取站点名称并清理（去掉 _ 及之后内容）
+      const dataHeaders = Object.keys(rawData[0]);
+      if (dataHeaders.length >= 2 && rawData.length > 0) {
+        const siteColName = dataHeaders[1]; // 第二列（0-indexed）
+        let rawSite = String(rawData[0][siteColName] || '').trim();
+        const usIdx = rawSite.indexOf('_');
+        appState.siteName = usIdx > 0 ? rawSite.substring(0, usIdx) : rawSite;
+      } else {
+        appState.siteName = '';
+      }
+
+      // 从文件名提取时分秒（如 2026-06-10 12_47_16 → 12:47:16）
+      const timeMatch = file.name.match(/(\d{1,2})[_](\d{1,2})[_](\d{1,2})/);
+      if (timeMatch) {
+        const hh = timeMatch[1].padStart(2, '0');
+        const mm = timeMatch[2].padStart(2, '0');
+        const ss = timeMatch[3].padStart(2, '0');
+        document.getElementById('statTime').value = `${hh}:${mm}:${ss}`;
+      }
+
+      // UI更新
+      uploadZone.classList.add('has-file');
+      document.getElementById('uploadTitle').textContent = '文件已加载';
+      document.getElementById('uploadFilename').textContent = file.name;
+      document.getElementById('fileStatus').textContent = `已加载：${file.name}（${appState.rawData.length} 行）`;
+      document.getElementById('runBtn').disabled = false;
+      showToast(`成功读取 ${appState.rawData.length} 条数据`, 'success');
+    } catch(err) {
+      console.error('loadFile error:', err);
+      showToast('文件处理异常：' + (err.message || '未知错误') + '。请联系管理员检查文件格式。', 'error');
+    }
+  };
+  reader.readAsArrayBuffer(file);
+}
+
+// ════════════════════════════════════════
+//  列名模糊匹配（按匹配长度打分，取最佳）
+// ════════════════════════════════════════
+function findCol(headers, keywords) {
+  // 优先：关键词与列名精确匹配
+  for (const k of keywords) {
+    for (const h of headers) {
+      if (String(h) === k) return h;
+    }
+  }
+  // 其次：按匹配关键词长度打分，最长匹配最优
+  let best = null, bestScore = 0;
+  for (const h of headers) {
+    const s = String(h);
+    for (const k of keywords) {
+      if (s.includes(k) && k.length > bestScore) {
+        best = h; bestScore = k.length;
+      }
+    }
+  }
+  return best;
+}
+
+// ════════════════════════════════════════
+//  计算逻辑
+
+// ════════════════════════════════════════
+// 时长格式化：3.5 → "3小时30分钟"
+// ════════════════════════════════════════
+function formatDuration(hours) {
+  const h = Math.floor(hours);
+  const m = Math.round((hours - h) * 60);
+  return `${h}小时${m}分钟`;
+}
+
+// ════════════════════════════════════════
+//  时长解析：支持 "6小时30分" 或纯数字
+// ════════════════════════════════════════
+function parseDuration(val) {
+  if (val === '' || val === null || val === undefined) return 0;
+  const s = String(val).trim();
+  const match = s.match(/(\d+)\s*小时\s*(\d+)?\s*分?/);
+  if (match) {
+    const h = parseInt(match[1]) || 0;
+    const m = parseInt(match[2]) || 0;
+    return h + m / 60;
+  }
+  const n = parseFloat(s);
+  return isNaN(n) ? 0 : n;
+}
+
+// ════════════════════════════════════════
+//  核心计算
+// ════════════════════════════════════════
+function calculate() {
+  const rawData = appState.rawData;
+  if (!rawData || rawData.length === 0) return;
+
+  const durationThresh = parseFloat(document.getElementById('thresholdDuration').value) || 6;
+  const orderThresh    = parseInt(document.getElementById('thresholdOrders').value) || 18;
+  const tiers          = getCurrentTiers();
+
+  const headers = Object.keys(rawData[0]);
+
+  const COL = {
+    name:     findCol(headers, ['姓名','骑手姓名','骑手']),
+    riderId:  findCol(headers, ['骑手ID','骑手id','骑士ID','工号']),
+    duration: findCol(headers, ['全天有效在线时长','有效在线时长','有效时长']),
+    orders:   findCol(headers, ['全天完单量','完单量','完单数']),
+    schedule: findCol(headers, ['排班状态']),
+    delivering: findCol(headers, ['配送中单量','配送中']),
+    workStatus: findCol(headers, ['工作状态']),
+    shift:    findCol(headers, ['时段']),
+  };
+
+  // 自动预筛选：有班次列时只保留"全天"数据
+  let data = rawData;
+  if (COL.shift) {
+    const fullDayData = rawData.filter(row => {
+      const s = String(row[COL.shift] || '').trim();
+      return s.includes('全天') || s === '全';
+    });
+    // 兜底：如果没筛到任何"全天"行，不过滤（可能数据中没有全天标记）
+    if (fullDayData.length > 0) {
+      data = fullDayData;
+    }
+  }
+
+  const riders = data.map(row => {
+    const name       = row[COL.name]     || '—';
+    const riderId    = COL.riderId ? String(row[COL.riderId] || '').trim() : '';
+    const duration   = parseDuration(row[COL.duration]);
+    const orders     = parseInt(row[COL.orders]) || 0;
+    const schedule   = COL.schedule ? String(row[COL.schedule]) : '';
+    const delivering = COL.delivering ? (parseInt(row[COL.delivering]) || 0) : 0;
+    const workStatus = COL.workStatus ? String(row[COL.workStatus]) : '';
+    const isScheduled = schedule.includes('排班') && !schedule.includes('未排班');
+
+    // 达标判断
+    const passTime  = duration >= durationThresh;
+    const passOrder = orders >= orderThresh;
+    let compliance;
+    if (passTime && passOrder) {
+      compliance = 'pass';
+    } else if (
+      (passTime && orders >= orderThresh - 2) ||
+      (passOrder && duration >= durationThresh - 0.5)
+    ) {
+      compliance = 'near';
+    } else {
+      compliance = 'fail';
+    }
+
+    // 分层
+    let tier = '未达标';
+    let nextGap = null;
+    for (const t of tiers) {
+      if (duration >= t.minDuration && orders >= t.minOrders) {
+        tier = t.name;
+        break;
+      }
+    }
+    // 计算距下一层（分层明细精确到小数点后一位）
+    const tierIdx = tiers.findIndex(t => t.name === tier);
+    if (tierIdx > 0) {
+      const nextTier = tiers[tierIdx - 1];
+      const orderGap = nextTier.minOrders - orders;
+      const timeGap  = nextTier.minDuration - duration;
+      if (orderGap > 0 || timeGap > 0) {
+        const parts = [];
+        if (timeGap > 0) parts.push(`时长+${timeGap.toFixed(1)}h`);
+        if (orderGap > 0) parts.push(`单量+${orderGap}单`);
+        nextGap = parts.join('，');
+      } else {
+        nextGap = '—';
+      }
+    } else if (tier === '未达标') {
+      // 距标准1
+      const s1 = tiers[tiers.length - 1];
+      const parts = [];
+      if (duration < s1.minDuration) parts.push(`时长+${(s1.minDuration - duration).toFixed(1)}h`);
+      if (orders < s1.minOrders) parts.push(`单量+${s1.minOrders - orders}单`);
+      nextGap = parts.join('，') || '—';
+    } else {
+      nextGap = '（最高层）';
+    }
+
+    return { name, riderId, duration, orders, delivering, workStatus, schedule, isScheduled, compliance, tier, nextGap };
+  });
+
+  // 按骑手ID去重（无ID列时退化为按姓名去重）
+  const dedupKey = (r) => r.riderId || r.name;
+  const seen = new Map();
+  for (const r of riders) {
+    const key = dedupKey(r);
+    const existing = seen.get(key);
+    if (!existing || r.orders > existing.orders) {
+      seen.set(key, r);
+    }
+  }
+  // 按原始顺序重建（保留 seen Map 中的最佳条目）
+  const uniqueRiders = [];
+  const added = new Set();
+  for (const r of riders) {
+    const key = dedupKey(r);
+    const best = seen.get(key);
+    if (best && !added.has(key)) {
+      uniqueRiders.push(best);
+      added.add(key);
+    }
+  }
+
+  // 汇总统计
+  const scheduled    = uniqueRiders.filter(r => r.isScheduled);
+  const activeRiders = uniqueRiders.filter(r => r.orders >= 1);
+  const passRiders   = scheduled.filter(r => r.compliance === 'pass');
+  const nearRiders   = scheduled.filter(r => r.compliance === 'near');
+  const failRiders   = scheduled.filter(r => r.compliance === 'fail');
+  const totalOrders  = uniqueRiders.reduce((s, r) => s + r.orders, 0);
+  const rate         = scheduled.length > 0 ? (passRiders.length / scheduled.length * 100).toFixed(1) : 0;
+  const efficiency   = scheduled.length > 0 ? (totalOrders / scheduled.length).toFixed(1) : 0;
+
+  // 分层统计（含全部有完单骑手）
+  const tierStats = {};
+  tiers.forEach(t => tierStats[t.name] = 0);
+  tierStats['未达标'] = 0;
+  uniqueRiders.filter(r => r.orders > 0 || r.isScheduled).forEach(r => {
+    tierStats[r.tier] = (tierStats[r.tier] || 0) + 1;
+  });
+
+  appState.result = { riders: uniqueRiders, scheduled, activeRiders, passRiders, nearRiders, failRiders, rate, efficiency, tierStats, totalOrders,
+    rawRowCount: rawData.length, filteredCount: data.length, uniqueCount: uniqueRiders.length };
+}
+
+// ════════════════════════════════════════
+//  渲染结果
+// ════════════════════════════════════════
+function renderResult() {
+  const { riders, scheduled, activeRiders, passRiders, nearRiders, failRiders, rate, efficiency, tierStats, totalOrders, rawRowCount, filteredCount, uniqueCount } = appState.result;
+  const siteName  = appState.siteName || '';
+  const statTime  = document.getElementById('statTime').value || '—';
+  const expected  = document.getElementById('expectedCount').value;
+  const dedupText = (filteredCount !== uniqueCount) ? `，已去重${filteredCount - uniqueCount}人` : '';
+
+  document.getElementById('siteNameDisplay').textContent = siteName || '—';
+  document.getElementById('siteNameDisplay').style.display = siteName ? '' : 'none';
+  document.getElementById('resultTitle').textContent = '达标统计结果';
+  document.getElementById('resultMeta').textContent = `统计时间：${statTime}　应排人数：${expected || '—'}人　统计${uniqueCount}人${dedupText}`;
+
+  document.getElementById('m-totalOrders').innerHTML  = `${totalOrders}<span class="metric-unit">单</span>`;
+  document.getElementById('m-scheduled').innerHTML = `${scheduled.length}<span class="metric-unit">人</span>`;
+  document.getElementById('m-active').innerHTML    = `${activeRiders.length}<span class="metric-unit">人</span>`;
+  document.getElementById('m-pass').innerHTML       = `${passRiders.length}<span class="metric-unit">人</span>`;
+  document.getElementById('m-rate').innerHTML       = `${rate}<span class="metric-unit">%</span>`;
+  document.getElementById('m-threshold').innerHTML  = `${Math.ceil((parseInt(expected) || 88) * 0.85)}<span class="metric-unit">人</span>`;
+  document.getElementById('m-efficiency').innerHTML = `${efficiency}<span class="metric-unit">单/人</span>`;
+
+  // 分层条形图
+  renderTierBars(tierStats);
+
+  // 表格
+  renderComplianceTable(riders);
+  renderTieringTable(riders);
+  bindSortHeaders();
+
+  document.getElementById('emptyState').style.display  = 'none';
+  document.getElementById('resultArea').style.display  = 'block';
+  document.getElementById('exportBtn').disabled         = false;
+}
+
+const TIER_COLORS = {
+  '标准5': '#3B5BDB', '标准4': '#2F855A', '标准3': '#185FA5',
+  '标准2': '#B45309', '标准1': '#C53030', '未达标': '#888780',
+};
+
+function renderTierBars(tierStats) {
+  const allKeys = [...DEFAULT_TIERS.map(t => t.name), '未达标'];
+  const total   = Object.values(tierStats).reduce((s, v) => s + v, 0) || 1;
+  const container = document.getElementById('tierBars');
+  container.innerHTML = allKeys.map(k => {
+    const count = tierStats[k] || 0;
+    const pctVal   = count / total * 100;
+    const pct   = pctVal.toFixed(1);
+    const color = TIER_COLORS[k];
+    return `
+      <div class="tier-bar-row">
+        <span class="tier-bar-label">${k}</span>
+        <div class="tier-bar-track">
+          <div class="tier-bar-fill" style="width:${pctVal.toFixed(1)}%;background:${color};">
+            ${count}
+          </div>
+        </div>
+        <span class="tier-bar-count">${count} 人 (${pct}%)</span>
+      </div>`;
+  }).join('');
+}
+
+const COMPLIANCE_LABELS = { pass: '达标', near: '接近达标', fail: '未达标' };
+const COMPLIANCE_SORT   = { pass: 0, near: 1, fail: 2 };
+const TIER_CLASS = {
+  '标准5':'tier-s5','标准4':'tier-s4','标准3':'tier-s3',
+  '标准2':'tier-s2','标准1':'tier-s1','未达标':'tier-fail',
+};
+
+function renderComplianceTable(riders, filter = 'all', search = '') {
+  // 1. 隐藏未排班且没完单的骑手
+  let list = riders.filter(r => r.isScheduled || r.orders > 0);
+  // 2. 用户筛选
+  if (filter !== 'all') list = list.filter(r => r.compliance === filter);
+  if (search)           list = list.filter(r => r.name.includes(search));
+  // 3. 排序
+  const sc = sortState.compliance;
+  if (sc.col) {
+    if (sc.col === 'compliance') {
+      list.sort((a, b) => {
+        const va = COMPLIANCE_SORT[a.compliance] ?? 9;
+        const vb = COMPLIANCE_SORT[b.compliance] ?? 9;
+        return sc.dir === 'asc' ? va - vb : vb - va;
+      });
+    } else {
+      list.sort((a, b) => sc.dir === 'asc' ? a[sc.col] - b[sc.col] : b[sc.col] - a[sc.col]);
+    }
+  }
+  // 4. 未排班但有完单的骑手置底
+  const scheduledList   = list.filter(r => r.isScheduled);
+  const unscheduledList = list.filter(r => !r.isScheduled);
+  list = [...scheduledList, ...unscheduledList];
+
+  updateSortArrows();
+  const tbody = document.getElementById('complianceTableBody');
+  if (list.length === 0) {
+    tbody.innerHTML = `<tr><td colspan="8" style="text-align:center;padding:24px;color:#888;">暂无数据</td></tr>`;
+    return;
+  }
+  tbody.innerHTML = list.map((r, i) => `
+    <tr>
+      <td style="color:#B4B2A9;">${i+1}</td>
+      <td style="font-weight:500;">${r.name}</td>
+      <td>${formatDuration(r.duration)}</td>
+      <td>${r.orders}</td>
+      <td>${r.delivering}</td>
+      <td style="color:#888;">${r.workStatus || '—'}</td>
+      <td style="color:#888;">${r.isScheduled ? (r.schedule || '排班') : '未排班'}</td>
+      <td><span class="badge badge-${r.compliance}"><span class="badge-dot"></span>${COMPLIANCE_LABELS[r.compliance]}</span></td>
+    </tr>`).join('');
+}
+
+function renderTieringTable(riders, filter = 'all', search = '') {
+  let list = riders.filter(r => r.orders > 0 || r.isScheduled);
+  if (filter !== 'all') list = list.filter(r => r.tier === filter);
+  if (search)           list = list.filter(r => r.name.includes(search));
+  // 排序
+  const st = sortState.tiering;
+  if (st.col) {
+    list.sort((a, b) => st.dir === 'asc' ? a[st.col] - b[st.col] : b[st.col] - a[st.col]);
+  }
+  updateSortArrows();
+  const tbody = document.getElementById('tieringTableBody');
+  if (list.length === 0) {
+    tbody.innerHTML = `<tr><td colspan="8" style="text-align:center;padding:24px;color:#888;">暂无数据</td></tr>`;
+    return;
+  }
+  tbody.innerHTML = list.map((r, i) => `
+    <tr>
+      <td style="color:#B4B2A9;">${i+1}</td>
+      <td style="font-weight:500;">${r.name}</td>
+      <td>${r.duration.toFixed(1)}h</td>
+      <td>${r.orders}</td>
+      <td>${r.delivering}</td>
+      <td style="color:#888;">${r.workStatus || '—'}</td>
+      <td><span class="badge ${TIER_CLASS[r.tier]}">${r.tier}</span></td>
+      <td style="color:#888;font-size:12px;">${r.nextGap || '—'}</td>
+    </tr>`).join('');
+
+  // 动态生成分层过滤按钮（基于全量数据，不随筛选变化）
+  const fullList = riders.filter(r => r.orders > 0 || r.isScheduled);
+  const tiers = [...new Set(fullList.map(r => r.tier))];
+  const btns  = document.getElementById('tierFilterBtns');
+  btns.innerHTML = `<button class="filter-btn ${filter==='all'?'active':''}" data-filter="all" data-table="tiering">全部</button>` +
+    [...DEFAULT_TIERS.map(t=>t.name), '未达标']
+      .filter(k => tiers.includes(k))
+      .map(k => `<button class="filter-btn ${filter===k?'active':''}" data-filter="${k}" data-table="tiering">${k}</button>`)
+      .join('');
+  bindFilterBtns();
+}
+
+// ════════════════════════════════════════
+//  搜索 & 过滤绑定
+// ════════════════════════════════════════
+let filterState = { compliance: 'all', tiering: 'all' };
+let sortState   = { compliance: { col: null, dir: null }, tiering: { col: null, dir: null } };
+
+// 排序表头点击（事件委托）
+function bindSortHeaders() {
+  document.querySelectorAll('.sort-header').forEach(th => {
+    th.addEventListener('click', () => {
+      const table = th.dataset.table;
+      const col   = th.dataset.column;
+      const cur   = sortState[table];
+      // 循环：无 → 升序 → 降序 → 无
+      if (cur.col !== col) { sortState[table] = { col, dir: 'asc' }; }
+      else if (cur.dir === 'asc') { sortState[table] = { col, dir: 'desc' }; }
+      else { sortState[table] = { col: null, dir: null }; }
+      // 重新渲染
+      const searchInput = document.getElementById(table === 'compliance' ? 'searchCompliance' : 'searchTiering');
+      if (table === 'compliance') {
+        renderComplianceTable(appState.result.riders, filterState.compliance, searchInput.value);
+      } else {
+        renderTieringTable(appState.result.riders, filterState.tiering, searchInput.value);
+      }
+    });
+  });
+}
+
+// 更新排序箭头样式
+function updateSortArrows() {
+  document.querySelectorAll('.sort-header').forEach(th => {
+    const table = th.dataset.table;
+    const col   = th.dataset.column;
+    const arrow = th.querySelector('.sort-arrow');
+    const cur   = sortState[table];
+    if (cur.col === col) {
+      th.classList.add('sort-active');
+      arrow.textContent = cur.dir === 'asc' ? '▲' : '▼';
+    } else {
+      th.classList.remove('sort-active');
+      arrow.textContent = '';
+    }
+  });
+}
+
+function bindFilterBtns() {
+  document.querySelectorAll('.filter-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const table  = btn.dataset.table;
+      const filter = btn.dataset.filter;
+      filterState[table] = filter;
+      document.querySelectorAll(`.filter-btn[data-table="${table}"]`).forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      if (table === 'compliance') {
+        renderComplianceTable(appState.result.riders, filter, document.getElementById('searchCompliance').value);
+      } else {
+        renderTieringTable(appState.result.riders, filter, document.getElementById('searchTiering').value);
+      }
+    });
+  });
+}
+
+document.getElementById('searchCompliance').addEventListener('input', e => {
+  renderComplianceTable(appState.result.riders, filterState.compliance, e.target.value);
+});
+document.getElementById('searchTiering').addEventListener('input', e => {
+  renderTieringTable(appState.result.riders, filterState.tiering, e.target.value);
+});
+
+// ════════════════════════════════════════
+//  标签页切换
+// ════════════════════════════════════════
+document.querySelectorAll('.tab-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+    document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+    btn.classList.add('active');
+    document.getElementById(`tab-${btn.dataset.tab}`).classList.add('active');
+  });
+});
+
+// ════════════════════════════════════════
+//  运行按钮
+// ════════════════════════════════════════
+document.getElementById('runBtn').addEventListener('click', () => {
+  if (!appState.rawData) return;
+  document.getElementById('progressOverlay').style.display = 'flex';
+  setTimeout(() => {
+    try {
+      calculate();
+      renderResult();
+      filterState = { compliance: 'all', tiering: 'all' };
+      bindFilterBtns();
+      showToast('计算完成', 'success');
+    } catch(err) {
+      showToast('计算出错：' + err.message, 'error');
+      console.error(err);
+    } finally {
+      document.getElementById('progressOverlay').style.display = 'none';
+    }
+  }, 200);
+});
+
+// ════════════════════════════════════════
+//  导出 Excel
+// ════════════════════════════════════════
+document.getElementById('exportBtn').addEventListener('click', () => {
+  if (!appState.result) return;
+  const { riders, scheduled, passRiders, nearRiders, failRiders, rate, efficiency, tierStats, totalOrders } = appState.result;
+  const siteName = appState.siteName || '站点';
+  const statTime = document.getElementById('statTime').value || '';
+  const expected = document.getElementById('expectedCount').value || '';
+
+  const wb = XLSX.utils.book_new();
+
+  // Sheet1: 统计情况
+  const s1 = [
+    ['骑手达标统计报表'],
+    ['站点名称', siteName, '统计时间', statTime],
+    ['应排人数', expected, '实际排班', scheduled.length],
+    ['总单量', totalOrders, '达标人数', passRiders.length],
+    ['达标率', `${rate}%`, '接近达标', nearRiders.length],
+    ['未达标', failRiders.length, '人效', `${efficiency}单/人`],
+    [],
+    ['甲方分层统计'],
+    ['层级', '人数', '占比'],
+  ];
+  const totalTier = Object.values(tierStats).reduce((s, v) => s + v, 0) || 1;
+  [...DEFAULT_TIERS.map(t=>t.name), '未达标'].forEach(k => {
+    const n = tierStats[k] || 0;
+    s1.push([k, n, `${(n/totalTier*100).toFixed(1)}%`]);
+  });
+  const ws1 = XLSX.utils.aoa_to_sheet(s1);
+  XLSX.utils.book_append_sheet(wb, ws1, '统计情况');
+
+  // Sheet2: 达标明细（隐藏未排班且没完单的骑手，未排班但有完单的置底）
+  const s2h = ['姓名','有效时长','完单量','配送中','工作状态','排班状态','达标情况'];
+  const s2list = riders.filter(r => r.isScheduled || r.orders > 0);
+  const s2scheduled = s2list.filter(r => r.isScheduled);
+  const s2unscheduled = s2list.filter(r => !r.isScheduled);
+  const s2d = [...s2scheduled, ...s2unscheduled].map(r => [
+    r.name, formatDuration(r.duration), r.orders, r.delivering,
+    r.workStatus, r.isScheduled ? (r.schedule || '排班') : '未排班', COMPLIANCE_LABELS[r.compliance]
+  ]);
+  const ws2 = XLSX.utils.aoa_to_sheet([s2h, ...s2d]);
+  XLSX.utils.book_append_sheet(wb, ws2, '全天达标详情');
+
+  // Sheet3: 分层明细
+  const s3h = ['姓名','有效时长(h)','完单量','配送中','工作状态','所属层级','距下一层'];
+  const s3d = riders.filter(r => r.orders > 0 || r.isScheduled).map(r => [
+    r.name, parseFloat(r.duration.toFixed(1)), r.orders, r.delivering,
+    r.workStatus, r.tier, r.nextGap
+  ]);
+  const ws3 = XLSX.utils.aoa_to_sheet([s3h, ...s3d]);
+  XLSX.utils.book_append_sheet(wb, ws3, '骑手分层详情');
+
+  // 生成时间戳文件名
+  const now  = new Date();
+  const ts   = `${now.getFullYear()}${String(now.getMonth()+1).padStart(2,'0')}${String(now.getDate()).padStart(2,'0')}`;
+  const tStr = statTime.replace(/:/g, '');
+  const fname = `${ts}_${siteName}_全天达标情况_${tStr}.xlsx`;
+  XLSX.writeFile(wb, fname);
+  showToast(`已导出 ${fname}`, 'success');
+});
+
+// ════════════════════════════════════════
+//  Toast
+// ════════════════════════════════════════
+function showToast(msg, type = '') {
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.className = `toast ${type}`;
+  el.classList.add('show');
+  setTimeout(() => el.classList.remove('show'), 2800);
+}
+
+// ════════════════════════════════════════
+//  初始化
+// ════════════════════════════════════════
+renderTierTable();
+bindFilterBtns();
+</script>
+</body>
+</html>
